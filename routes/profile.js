@@ -3,6 +3,7 @@ const router = express.Router();
 const auth = require('../middleware/auth');
 const Profile = require('../models/Profile');
 const { v4: uuidv4 } = require('uuid');
+const crypto = require('crypto');
 
 // @route   GET api/profile/me
 // @desc    Get all user's profiles
@@ -57,8 +58,8 @@ router.post('/', [auth, upload.fields([{ name: 'profileImage', maxCount: 1 }, { 
                 { new: true }
             );
         } else {
-            // Create new profile
-            profileFields.uniqueId = Math.random().toString(36).substring(2, 10);
+            // Create new profile - Use a secure random hash for the URL (16 characters)
+            profileFields.uniqueId = crypto.randomBytes(8).toString('hex');
             profile = new Profile(profileFields);
             await profile.save();
         }
