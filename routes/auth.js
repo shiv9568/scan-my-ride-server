@@ -16,10 +16,10 @@ router.post('/register', async (req, res) => {
         user = new User({ name, email, password });
         await user.save();
 
-        const payload = { user: { id: user.id } };
+        const payload = { user: { id: user.id, role: user.role } };
         jwt.sign(payload, process.env.JWT_SECRET || 'secret', { expiresIn: '7d' }, (err, token) => {
             if (err) throw err;
-            res.json({ token, user: { id: user.id, name: user.name, email: user.email } });
+            res.json({ token, user: { id: user.id, name: user.name, email: user.email, role: user.role } });
         });
     } catch (err) {
         console.error(err.message);
@@ -41,14 +41,28 @@ router.post('/login', async (req, res) => {
             return res.status(400).json({ msg: 'Invalid Credentials' });
         }
 
-        const payload = { user: { id: user.id } };
+        const payload = { user: { id: user.id, role: user.role } };
         jwt.sign(payload, process.env.JWT_SECRET || 'secret', { expiresIn: '7d' }, (err, token) => {
             if (err) throw err;
-            res.json({ token, user: { id: user.id, name: user.name, email: user.email } });
+            res.json({ token, user: { id: user.id, name: user.name, email: user.email, role: user.role } });
         });
     } catch (err) {
         console.error(err.message);
         res.status(500).send('Server error');
+    }
+});
+
+const auth = require('../middleware/auth');
+
+// @route   GET api/auth/me
+// @desc    Get current user
+router.get('/me', auth, async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id).select('-password');
+        res.json(user);
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
     }
 });
 

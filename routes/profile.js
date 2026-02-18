@@ -34,10 +34,16 @@ router.post('/', [auth, upload.fields([{ name: 'profileImage', maxCount: 1 }, { 
         user: req.user.id,
         carName, ownerName, phoneNumber, profession, 
         instagram, linkedin, emergencyContact, bloodGroup, 
-        city, isPublic, showPhone, emergencyMode, themeColor, selectedTheme, isVerified,
+        city, isPublic, showPhone, emergencyMode, themeColor, selectedTheme,
         specs: typeof specs === 'string' ? JSON.parse(specs) : specs,
         youtubeLink
     };
+
+    // Only allow setting isVerified if explicitly provided (usually for Admin tasks)
+    // For regular updates, we don't want to overwrite it with undefined
+    if (isVerified !== undefined) {
+        profileFields.isVerified = isVerified;
+    }
     
     if (req.files) {
         if (req.files.profileImage) {
@@ -52,6 +58,7 @@ router.post('/', [auth, upload.fields([{ name: 'profileImage', maxCount: 1 }, { 
         let profile;
         if (id) {
             // Update specific profile
+            // Use $set with only the fields we built to avoid wiping out other fields like uniqueId or count
             profile = await Profile.findOneAndUpdate(
                 { _id: id, user: req.user.id },
                 { $set: profileFields },
