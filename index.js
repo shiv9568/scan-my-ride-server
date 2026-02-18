@@ -5,7 +5,6 @@ const dotenv = require('dotenv');
 const path = require('path');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
-require('express-async-errors');
 
 dotenv.config();
 
@@ -28,7 +27,7 @@ const limiter = rateLimit({
 app.use('/api/', limiter);
 
 app.use(cors({
-    origin: ['https://scan-my-ride-client.vercel.app', 'http://localhost:5173', 'http://localhost:5000'],
+    origin: ['https://scan-my-ride-client.vercel.app', 'http://localhost:5173', 'http://localhost:5000', 'http://127.0.0.1:5173'],
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     allowedHeaders: ['Content-Type', 'x-auth-token']
 }));
