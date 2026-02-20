@@ -4,6 +4,7 @@ const auth = require('../middleware/auth');
 const Profile = require('../models/Profile');
 const { v4: uuidv4 } = require('uuid');
 const crypto = require('crypto');
+const Filter = require('bad-words'); // Profanity filter
 
 // @route   GET api/profile/me
 // @desc    Get all user's profiles
@@ -21,7 +22,7 @@ const upload = require('../middleware/upload');
 
 // @route   POST api/profile
 // @desc    Create or update user profile
-router.post('/', [auth, upload.fields([{ name: 'profileImage', maxCount: 1 }, { name: 'carImage', maxCount: 1 }])], async (req, res) => {
+router.post('/', [auth, upload.fields([{ name: 'profileImage', maxCount: 1 }, { name: 'carImage', maxCount: 1 }, { name: 'customQrLogo', maxCount: 1 }])], async (req, res) => {
     const {
         id, // Add id for updates
         carName, ownerName, phoneNumber, profession, 
@@ -52,6 +53,9 @@ router.post('/', [auth, upload.fields([{ name: 'profileImage', maxCount: 1 }, { 
         if (req.files.carImage) {
             profileFields.carImage = req.files.carImage[0].path.replace(/\\/g, "/");
         }
+        if (req.files.customQrLogo) {
+            profileFields.customQrLogo = req.files.customQrLogo[0].path.replace(/\\/g, "/");
+        }
     }
 
     try {
@@ -81,17 +85,82 @@ router.post('/', [auth, upload.fields([{ name: 'profileImage', maxCount: 1 }, { 
 // @desc    Get profile by uniqueId (Public)
 router.get('/public/:uniqueId', async (req, res) => {
     try {
-        const profile = await Profile.findOne({ uniqueId: req.params.uniqueId });
+        const profile = await Profile.findOne({ uniqueId: req.params.uniqueId }).lean();
         if (!profile || !profile.isPublic) {
             return res.status(404).json({ msg: 'Profile not found' });
         }
         
-        // Track scan
-        profile.scanCount += 1;
-        profile.lastScanned = Date.now();
-        await profile.save();
-
+        // Return instantly to user
         res.json(profile);
+
+        // Track scan in background (no await)
+        Profile.findOneAndUpdate(
+            { uniqueId: req.params.uniqueId },
+            { 
+                $inc: { scanCount: 1 },
+                $set: { lastScanned: Date.now() }
+            }
+        ).catch(err => console.error('Background Scan Count Error:', err));
+
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
+    }
+});
+
+// @route   POST api/profile/public/:uniqueId/guestbook
+// @desc    Add a message to the guestbook (Public)
+router.post('/public/:uniqueId/guestbook', async (req, res) => {
+    const { name, message } = req.body;
+    const filter = new Filter();
+
+    if (!message) return res.status(400).json({ msg: 'Message is required' });
+
+    try {
+        const cleanMessage = filter.clean(message);
+        const newEntry = {
+            name: name || 'Anonymous Enthusiast',
+            message: cleanMessage,
+            date: Date.now()
+        };
+
+        const profile = await Profile.findOneAndUpdate(
+            { uniqueId: req.params.uniqueId },
+            { $push: { guestbook: { $each: [newEntry], $position: 0 } } }, // Add to top
+            { new: true }
+        );
+
+        if (!profile) return res.status(404).json({ msg: 'Profile not found' });
+        res.json(profile.guestbook);
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
+    }
+});
+
+// @route   POST api/profile/public/:uniqueId/alert
+// @desc    Send a private parking alert/notification (Public scanner -> Owner)
+router.post('/public/:uniqueId/alert', async (req, res) => {
+    const { message } = req.body;
+
+    if (!message) return res.status(400).json({ msg: 'Alert message is required' });
+
+    try {
+        const newAlert = {
+            type: 'alert',
+            message,
+            date: Date.now(),
+            read: false
+        };
+
+        const profile = await Profile.findOneAndUpdate(
+            { uniqueId: req.params.uniqueId },
+            { $push: { notifications: { $each: [newAlert], $position: 0 } } },
+            { new: true }
+        );
+
+        if (!profile) return res.status(404).json({ msg: 'Profile not found' });
+        res.json({ msg: 'Alert sent successfully' });
     } catch (err) {
         console.error(err.message);
         res.status(500).send('Server Error');

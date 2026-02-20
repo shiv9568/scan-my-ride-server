@@ -9,7 +9,8 @@ const ProfileSchema = new mongoose.Schema({
     uniqueId: {
         type: String,
         required: true,
-        unique: true
+        unique: true,
+        index: true
     },
     carName: {
         type: String,
@@ -95,7 +96,22 @@ const ProfileSchema = new mongoose.Schema({
     },
     lastScanned: {
         type: Date
-    }
+    },
+    customQrLogo: {
+        type: String,
+        default: ''
+    },
+    guestbook: [{
+        name: String,
+        message: String,
+        date: { type: Date, default: Date.now }
+    }],
+    notifications: [{
+        type: { type: String, enum: ['alert', 'message'], default: 'alert' },
+        message: String,
+        date: { type: Date, default: Date.now },
+        read: { type: Boolean, default: false }
+    }]
 });
 
 module.exports = mongoose.model('Profile', ProfileSchema);
