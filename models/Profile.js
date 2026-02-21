@@ -70,11 +70,20 @@ const ProfileSchema = new mongoose.Schema({
     },
     themeColor: {
         type: String,
-        default: '#3b82f6'
+        default: '#f4b00b'
     },
     selectedTheme: {
         type: String,
         default: 'carbon'
+    },
+    uiMode: {
+        type: String,
+        enum: ['dark', 'light'],
+        default: 'dark'
+    },
+    fontStyle: {
+        type: String,
+        default: 'font-outfit'
     },
     isVerified: {
         type: Boolean,
@@ -106,6 +115,19 @@ const ProfileSchema = new mongoose.Schema({
         message: String,
         date: { type: Date, default: Date.now }
     }],
+    profileType: {
+        type: String,
+        enum: ['car', 'business', 'portfolio'],
+        default: 'car'
+    },
+    resumeLink: {
+        type: String,
+        default: ''
+    },
+    workDetails: {
+        type: String,
+        default: ''
+    },
     notifications: [{
         type: { type: String, enum: ['alert', 'message'], default: 'alert' },
         message: String,
