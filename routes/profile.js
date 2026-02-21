@@ -66,7 +66,7 @@ router.post('/', [auth, upload.fields([{ name: 'profileImage', maxCount: 1 }, { 
             profile = await Profile.findOneAndUpdate(
                 { _id: id, user: req.user.id },
                 { $set: profileFields },
-                { new: true }
+                { returnDocument: 'after' }
             );
         } else {
             // Create new profile - Use a secure random hash for the URL (16 characters)
@@ -127,7 +127,7 @@ router.post('/public/:uniqueId/guestbook', async (req, res) => {
         const profile = await Profile.findOneAndUpdate(
             { uniqueId: req.params.uniqueId },
             { $push: { guestbook: { $each: [newEntry], $position: 0 } } }, // Add to top
-            { new: true }
+            { returnDocument: 'after' }
         );
 
         if (!profile) return res.status(404).json({ msg: 'Profile not found' });
@@ -156,7 +156,7 @@ router.post('/public/:uniqueId/alert', async (req, res) => {
         const profile = await Profile.findOneAndUpdate(
             { uniqueId: req.params.uniqueId },
             { $push: { notifications: { $each: [newAlert], $position: 0 } } },
-            { new: true }
+            { returnDocument: 'after' }
         );
 
         if (!profile) return res.status(404).json({ msg: 'Profile not found' });
