@@ -79,7 +79,7 @@ app.use((err, req, res, next) => {
     console.error('SYSTEM ERROR:', err.stack);
     res.status(err.status || 500).json({
         msg: 'The server encountered an issue. Please try again later.',
-        error: process.env.NODE_ENV === 'development' ? err.message : undefined
+        error: err.message
     });
 });
 
