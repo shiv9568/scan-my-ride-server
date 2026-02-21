@@ -50,13 +50,19 @@ router.post('/', [auth, upload.fields([{ name: 'profileImage', maxCount: 1 }, { 
     
     if (req.files) {
         if (req.files.profileImage) {
-            profileFields.profileImage = req.files.profileImage[0].path.replace(/\\/g, "/");
+            const file = req.files.profileImage[0];
+            const base64 = file.buffer.toString('base64');
+            profileFields.profileImage = `data:${file.mimetype};base64,${base64}`;
         }
         if (req.files.carImage) {
-            profileFields.carImage = req.files.carImage[0].path.replace(/\\/g, "/");
+            const file = req.files.carImage[0];
+            const base64 = file.buffer.toString('base64');
+            profileFields.carImage = `data:${file.mimetype};base64,${base64}`;
         }
         if (req.files.customQrLogo) {
-            profileFields.customQrLogo = req.files.customQrLogo[0].path.replace(/\\/g, "/");
+            const file = req.files.customQrLogo[0];
+            const base64 = file.buffer.toString('base64');
+            profileFields.customQrLogo = `data:${file.mimetype};base64,${base64}`;
         }
     }
 
