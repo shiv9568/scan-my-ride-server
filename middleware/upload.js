@@ -20,8 +20,6 @@ if (process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && proce
         cloudinary: cloudinary,
         params: {
             folder: 'scanmyride_profiles',
-            format: async (req, file) => 'jpg', // Force a simple format to avoid signature complexity
-            public_id: (req, file) => file.fieldname + '-' + Date.now(),
         }
     });
     console.log('✅ Using Cloudinary Storage for Uploads');

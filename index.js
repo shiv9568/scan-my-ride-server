@@ -102,5 +102,5 @@ const connectDB = async () => {
 connectDB();
 
 app.listen(PORT, '0.0.0.0', () => {
-    console.log(`🚀 Server fully operational on port ${PORT}`);
+    console.log(`🚀 Server fully operational on port ${PORT} [v2-upload-fix]`);
 });
