@@ -1,4 +1,3 @@
-//transparent gumming pr mirror pr nikalna hae
 
 const express = require('express');
 const mongoose = require('mongoose');
