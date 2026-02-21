@@ -8,19 +8,20 @@ const { CloudinaryStorage } = require('multer-storage-cloudinary');
 cloudinary.config({
     cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
     api_key: process.env.CLOUDINARY_API_KEY,
-    api_secret: process.env.CLOUDINARY_API_SECRET
+    api_secret: process.env.CLOUDINARY_API_SECRET,
+    secure: true
 });
 
 let storage;
 
 // Check if Cloudinary is configured
-if (process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY) {
+if (process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET) {
     storage = new CloudinaryStorage({
         cloudinary: cloudinary,
         params: {
             folder: 'scanmyride_profiles',
-            allowed_formats: ['jpg', 'png', 'jpeg', 'gif'],
-            transformation: [{ width: 1000, height: 1000, crop: 'limit' }]
+            format: async (req, file) => 'jpg', // Force a simple format to avoid signature complexity
+            public_id: (req, file) => file.fieldname + '-' + Date.now(),
         }
     });
     console.log('✅ Using Cloudinary Storage for Uploads');
