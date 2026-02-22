@@ -102,4 +102,21 @@ connectDB();
 
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Server fully operational on port ${PORT} [v2-upload-fix]`);
+
+    // ─── Keep-Alive Ping ───────────────────────────────────────────────────
+    // Render free tier spins down after 15 min of inactivity → 30-60s cold start.
+    // Ping the base route every 14 min to keep the server warm.
+    if (process.env.RENDER_EXTERNAL_URL) {
+        const https = require('https');
+        const pingUrl = process.env.RENDER_EXTERNAL_URL;
+        setInterval(() => {
+            https.get(pingUrl, (res) => {
+                console.log(`♻️  Keep-alive ping sent → ${res.statusCode}`);
+            }).on('error', (err) => {
+                console.warn('⚠️  Keep-alive ping failed:', err.message);
+            });
+        }, 14 * 60 * 1000); // Every 14 minutes
+        console.log(`📡 Keep-alive enabled → pinging ${pingUrl} every 14 min`);
+    }
 });
+

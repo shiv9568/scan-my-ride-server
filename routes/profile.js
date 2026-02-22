@@ -97,7 +97,10 @@ router.get('/public/:uniqueId', async (req, res) => {
         if (!profile || !profile.isPublic) {
             return res.status(404).json({ msg: 'Profile not found' });
         }
-        
+
+        // Allow browser to cache for 30s, serve stale for 60s while revalidating in background
+        res.set('Cache-Control', 'public, max-age=30, stale-while-revalidate=60');
+
         // Return instantly to user
         res.json(profile);
 
