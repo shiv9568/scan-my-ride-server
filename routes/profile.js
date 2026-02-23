@@ -29,7 +29,7 @@ router.post('/', [auth, upload.fields([{ name: 'profileImage', maxCount: 1 }, { 
         instagram, linkedin, emergencyContact, bloodGroup, 
         city, isPublic, showPhone, emergencyMode, themeColor, selectedTheme, isVerified,
         specs, youtubeLink, uiMode, fontStyle,
-        profileType, resumeLink, workDetails
+        profileType, resumeLink, workDetails, carCompany
     } = req.body;
 
     const profileFields = {
@@ -39,7 +39,7 @@ router.post('/', [auth, upload.fields([{ name: 'profileImage', maxCount: 1 }, { 
         city, isPublic, showPhone, emergencyMode, themeColor, selectedTheme,
         specs: typeof specs === 'string' ? JSON.parse(specs) : specs,
         youtubeLink, uiMode, fontStyle,
-        profileType, resumeLink, workDetails
+        profileType, resumeLink, workDetails, carCompany
     };
 
     // Only allow setting isVerified if explicitly provided (usually for Admin tasks)

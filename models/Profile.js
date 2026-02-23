@@ -16,6 +16,10 @@ const ProfileSchema = new mongoose.Schema({
         type: String,
         default: 'My Awesome Car'
     },
+    carCompany: {
+        type: String,
+        default: ''
+    },
     carImage: {
         type: String,
         default: ''
