@@ -22,7 +22,22 @@ const upload = require('../middleware/upload');
 
 // @route   POST api/profile
 // @desc    Create or update user profile
-router.post('/', [auth, upload.fields([{ name: 'profileImage', maxCount: 1 }, { name: 'carImage', maxCount: 1 }, { name: 'customQrLogo', maxCount: 1 }])], async (req, res) => {
+const uploadMiddleware = (req, res, next) => {
+    upload.fields([
+        { name: 'profileImage', maxCount: 1 },
+        { name: 'carImage', maxCount: 1 },
+        { name: 'customQrLogo', maxCount: 1 }
+    ])(req, res, (err) => {
+        if (err) {
+            const msg = err.code === 'LIMIT_FILE_SIZE'
+                ? 'Image too large. Max 10MB allowed.'
+                : err.message || 'Image upload failed';
+            return res.status(400).json({ msg });
+        }
+        next();
+    });
+};
+router.post('/', [auth, uploadMiddleware], async (req, res) => {
     const {
         id, // Add id for updates
         carName, ownerName, phoneNumber, profession, 

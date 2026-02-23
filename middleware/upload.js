@@ -7,22 +7,22 @@ const storage = multer.memoryStorage();
 // Init upload
 const upload = multer({
     storage: storage,
-    limits:{fileSize: 2000000}, // 2MB limit for MongoDB performance
+    limits: { fileSize: 10 * 1024 * 1024 }, // 10MB – mobile cameras need this
     fileFilter: function(req, file, cb){
         checkFileType(file, cb);
     }
 });
 
-// Check file type
+// Check file type – supports mobile formats (HEIC, WEBP)
 function checkFileType(file, cb){
-    const filetypes = /jpeg|jpg|png|gif/;
+    const filetypes = /jpeg|jpg|png|gif|webp|heic|heif/;
     const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
-    const mimetype = filetypes.test(file.mimetype);
+    const mimetype = /image\/(jpeg|jpg|png|gif|webp|heic|heif)/.test(file.mimetype);
 
-    if(mimetype && extname){
+    if(mimetype || extname){
         return cb(null, true);
     } else {
-        cb('Error: Images Only!');
+        cb(new Error('Only image files (JPG, PNG, GIF, WEBP, HEIC) are allowed'));
     }
 }
 
