@@ -72,7 +72,13 @@ app.use(cors(corsOptions));
 
 
 app.use(express.json({ limit: '10mb' })); 
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+// Serve uploaded images with explicit CORS headers so mobile browsers can
+// fetch them into a canvas (required for the QR sticker download feature)
+app.use('/uploads', (req, res, next) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+    next();
+}, express.static(path.join(__dirname, 'uploads')));
 
 // Routes
 app.use('/api/auth', require('./routes/auth'));
