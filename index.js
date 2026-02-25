@@ -29,31 +29,49 @@ const limiter = rateLimit({
 });
 app.use('/api/', limiter);
 
-app.use(cors({
-    origin: function(origin, callback) {
-        const allowedOrigins = [
-            'https://scan-my-ride-client.vercel.app',
-            'http://localhost:5173',
-            'http://localhost:5174',
-            'http://localhost:5000',
-            'http://127.0.0.1:5173',
-            'http://192.168.29.115:5173',
-            'http://192.168.29.115:5174',
-        ];
-        // Allow requests with no origin (like mobile apps, curl, etc.)
+// ── CORS ─────────────────────────────────────────────────────────────────────
+// Build the allowed-origins list from code + optional env override
+const STATIC_ORIGINS = [
+    'https://scan-my-ride-client.vercel.app',
+    'https://scanmyride.in',
+    'http://localhost:5173',
+    'http://localhost:5174',
+    'http://localhost:5000',
+    'http://127.0.0.1:5173',
+];
+
+const corsOptions = {
+    origin: function (origin, callback) {
+        // Allow no-origin (mobile apps, curl, Postman, server-to-server)
         if (!origin) return callback(null, true);
-        // Allow any local network IP (192.168.x.x) for easy local testing
-        if (/^http:\/\/192\.168\.\d+\.\d+(:\d+)?$/.test(origin)) {
-            return callback(null, true);
-        }
-        if (allowedOrigins.includes(origin)) {
-            return callback(null, true);
-        }
+
+        // Extra origins from env (comma-separated), e.g. set in Render dashboard
+        const envOrigins = (process.env.ALLOWED_ORIGINS || '')
+            .split(',').map(s => s.trim()).filter(Boolean);
+
+        const allowed = [...STATIC_ORIGINS, ...envOrigins];
+
+        // Allow ANY *.vercel.app preview deployment
+        if (/^https:\/\/[\w-]+(\.vercel\.app)$/.test(origin)) return callback(null, true);
+        // Allow any local network IP for easy dev testing
+        if (/^http:\/\/192\.168\.\d+\.\d+(:\d+)?$/.test(origin)) return callback(null, true);
+        // Allow any localhost port
+        if (/^http:\/\/localhost:\d+$/.test(origin)) return callback(null, true);
+
+        if (allowed.includes(origin)) return callback(null, true);
+
+        console.warn('CORS blocked:', origin);
         callback(new Error('CORS: Origin not allowed - ' + origin));
     },
-    methods: ['GET', 'POST', 'PUT', 'DELETE'],
-    allowedHeaders: ['Content-Type', 'x-auth-token']
-}));
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'x-auth-token', 'Authorization'],
+    credentials: true,
+    optionsSuccessStatus: 200, // Some legacy browsers choke on 204
+};
+
+app.use(cors(corsOptions));
+// Explicitly handle OPTIONS preflight for all routes
+app.options('*', cors(corsOptions));
 
 app.use(express.json({ limit: '10mb' })); 
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -100,23 +118,31 @@ const connectDB = async () => {
 
 connectDB();
 
+// ── Health check endpoint (used by keep-alive ping, uptime monitors) ──────────
+app.get('/health', (req, res) => res.json({ status: 'ok', ts: Date.now() }));
+
 app.listen(PORT, '0.0.0.0', () => {
-    console.log(`🚀 Server fully operational on port ${PORT} [v2-upload-fix]`);
+    console.log(`🚀 Server fully operational on port ${PORT}`);
 
     // ─── Keep-Alive Ping ───────────────────────────────────────────────────
     // Render free tier spins down after 15 min of inactivity → 30-60s cold start.
-    // Ping the base route every 14 min to keep the server warm.
-    if (process.env.RENDER_EXTERNAL_URL) {
+    // Ping /health every 10 min to keep the server warm.
+    const pingTarget = process.env.RENDER_EXTERNAL_URL
+        ? `${process.env.RENDER_EXTERNAL_URL}/health`
+        : null;
+
+    if (pingTarget) {
         const https = require('https');
-        const pingUrl = process.env.RENDER_EXTERNAL_URL;
-        setInterval(() => {
-            https.get(pingUrl, (res) => {
-                console.log(`♻️  Keep-alive ping sent → ${res.statusCode}`);
+        const doPing = () => {
+            https.get(pingTarget, (res) => {
+                console.log(`♻️  Keep-alive ping → ${res.statusCode}`);
             }).on('error', (err) => {
                 console.warn('⚠️  Keep-alive ping failed:', err.message);
             });
-        }, 14 * 60 * 1000); // Every 14 minutes
-        console.log(`📡 Keep-alive enabled → pinging ${pingUrl} every 14 min`);
+        };
+        // First ping after 30s (give server time to fully start)
+        setTimeout(doPing, 30_000);
+        setInterval(doPing, 10 * 60 * 1000); // Every 10 minutes
+        console.log(`📡 Keep-alive enabled → pinging ${pingTarget} every 10 min`);
     }
 });
-
