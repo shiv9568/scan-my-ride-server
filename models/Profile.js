@@ -137,7 +137,12 @@ const ProfileSchema = new mongoose.Schema({
         message: String,
         date: { type: Date, default: Date.now },
         read: { type: Boolean, default: false }
-    }]
+    }],
+    qrVariant: {
+        type: String,
+        enum: ['sticker', 'banner', 'carImage'],
+        default: 'sticker'
+    }
 });
 
 module.exports = mongoose.model('Profile', ProfileSchema);
