@@ -71,7 +71,7 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 // Explicitly handle OPTIONS preflight for all routes
-app.options('*', cors(corsOptions));
+app.options('/*', cors(corsOptions));
 
 app.use(express.json({ limit: '10mb' })); 
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
