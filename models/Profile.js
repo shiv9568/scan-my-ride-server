@@ -142,7 +142,14 @@ const ProfileSchema = new mongoose.Schema({
         type: String,
         enum: ['sticker', 'banner', 'carImage'],
         default: 'sticker'
-    }
+    },
+    scanHistory: [{
+        latitude: { type: Number },
+        longitude: { type: Number },
+        timestamp: { type: Date, default: Date.now },
+        city: { type: String, default: '' },
+        device: { type: String, default: '' }
+    }]
 });
 
 module.exports = mongoose.model('Profile', ProfileSchema);

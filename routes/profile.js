@@ -119,14 +119,13 @@ router.get('/public/:uniqueId', async (req, res) => {
         // Return instantly to user
         res.json(profile);
 
-        // Track scan in background (no await)
         Profile.findOneAndUpdate(
             { uniqueId: req.params.uniqueId },
             { 
                 $inc: { scanCount: 1 },
                 $set: { lastScanned: Date.now() }
             }
-        ).catch(err => console.error('Background Scan Count Error:', err));
+        ).catch(err => console.error('Background Scan Track Error:', err));
 
     } catch (err) {
         console.error(err.message);
