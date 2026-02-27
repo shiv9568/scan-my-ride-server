@@ -20,18 +20,10 @@ app.use(helmet({
     crossOriginResourcePolicy: false, // Required for displaying local/external images
 }));
 
-// Rate Limiting: Prevent DDoS and brute force
-const limiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 200, // Limit each IP to 200 requests per window
-    message: { msg: 'Too many requests from this IP, please try again after 15 minutes' },
-    standardHeaders: true,
-    legacyHeaders: false,
-});
-app.use('/api/', limiter);
 
 // ── CORS ─────────────────────────────────────────────────────────────────────
-// Build the allowed-origins list from code + optional env override
+// ⚠️  MUST be registered BEFORE the rate limiter so every response
+//     (including 429 / error responses) includes CORS headers.
 const STATIC_ORIGINS = [
     'https://scan-my-ride-client.vercel.app',
     'https://scanmyride.in',
@@ -44,18 +36,16 @@ const STATIC_ORIGINS = [
 
 const corsOptions = {
     origin: function (origin, callback) {
-        // Allow no-origin (mobile apps, curl, Postman, server-to-server)
         if (!origin) return callback(null, true);
 
-        // Extra origins from env (comma-separated), e.g. set in Render dashboard
         const envOrigins = (process.env.ALLOWED_ORIGINS || '')
             .split(',').map(s => s.trim()).filter(Boolean);
 
         const allowed = [...STATIC_ORIGINS, ...envOrigins];
 
         // Allow ANY *.vercel.app preview deployment
-        if (/^https:\/\/[\w-]+(\.vercel\.app)$/.test(origin)) return callback(null, true);
-        // Allow any local network IP for easy dev testing
+        if (/^https:\/\/[\w-]+\.vercel\.app$/.test(origin)) return callback(null, true);
+        // Allow any LAN IP (for mobile dev testing)
         if (/^http:\/\/192\.168\.\d+\.\d+(:\d+)?$/.test(origin)) return callback(null, true);
         // Allow any localhost port
         if (/^http:\/\/localhost:\d+$/.test(origin)) return callback(null, true);
@@ -68,9 +58,20 @@ const corsOptions = {
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'x-auth-token', 'Authorization'],
     credentials: true,
-    optionsSuccessStatus: 200, // Some legacy browsers choke on 204
+    optionsSuccessStatus: 200,
 };
 app.use(cors(corsOptions));
+// Note: cors() middleware above automatically handles OPTIONS preflight requests
+
+// Rate Limiting (registered AFTER CORS so error responses include CORS headers)
+const limiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 200,
+    message: { msg: 'Too many requests from this IP, please try again after 15 minutes' },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+app.use('/api/', limiter);
 
 
 app.use(express.json({ limit: '10mb' })); 
