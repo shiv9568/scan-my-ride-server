@@ -17,7 +17,7 @@ const sendEmail = async ({ to, subject, html }) => {
         secure: true, // Port 465 uses SSL/TLS directly
         auth: {
             user: "shivanshbhatia9568@gmail.com",
-            pass: "fzofiafctfzutedu"
+            pass: "jovxgvjceafymccm"
         },
         tls: {
             rejectUnauthorized: false
