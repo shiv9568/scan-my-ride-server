@@ -12,7 +12,10 @@ const sendEmail = async ({ to, subject, html }) => {
         auth: {
             user: process.env.EMAIL_USER,
             pass: process.env.EMAIL_PASS
-        }
+        },
+        connectionTimeout: 10000, // 10 seconds before timing out connection attempt
+        greetingTimeout: 10000,   // 10 seconds before timing out greeting
+        socketTimeout: 20000,     // 20 seconds for inactivity
     });
 
     const mailOptions = {

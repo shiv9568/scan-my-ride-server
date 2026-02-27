@@ -11,6 +11,7 @@ const compression = require('compression');
 dotenv.config();
 
 const app = express();
+app.set('trust proxy', 1); // Trust first-hop proxy (Render, Vercel, etc.)
 app.use(compression()); // Compress all responses
 const PORT = process.env.PORT || 5000;
 
@@ -34,6 +35,7 @@ app.use('/api/', limiter);
 const STATIC_ORIGINS = [
     'https://scan-my-ride-client.vercel.app',
     'https://scanmyride.in',
+    'https://www.scanmyride.in',
     'http://localhost:5173',
     'http://localhost:5174',
     'http://localhost:5000',
