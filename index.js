@@ -133,20 +133,18 @@ app.listen(PORT, '0.0.0.0', () => {
     // Ping /health every 10 min to keep the server warm.
     const pingTarget = process.env.RENDER_EXTERNAL_URL
         ? `${process.env.RENDER_EXTERNAL_URL}/health`
-        : null;
+        : 'https://scan-my-ride-server.onrender.com/health';
 
-    if (pingTarget) {
-        const https = require('https');
-        const doPing = () => {
-            https.get(pingTarget, (res) => {
-                console.log(`♻️  Keep-alive ping → ${res.statusCode}`);
-            }).on('error', (err) => {
-                console.warn('⚠️  Keep-alive ping failed:', err.message);
-            });
-        };
-        // First ping after 30s (give server time to fully start)
-        setTimeout(doPing, 30_000);
-        setInterval(doPing, 10 * 60 * 1000); // Every 10 minutes
-        console.log(`📡 Keep-alive enabled → pinging ${pingTarget} every 10 min`);
-    }
+    const https = require('https');
+    const doPing = () => {
+        https.get(pingTarget, (res) => {
+            console.log(`♻️  Keep-alive ping → ${res.statusCode}`);
+        }).on('error', (err) => {
+            console.warn('⚠️  Keep-alive ping failed:', err.message);
+        });
+    };
+    // First ping after 30s (give server time to fully start)
+    setTimeout(doPing, 30_000);
+    setInterval(doPing, 10 * 60 * 1000); // Every 10 minutes
+    console.log(`📡 Keep-alive enabled → pinging ${pingTarget} every 10 min`);
 });

@@ -2,6 +2,9 @@ const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/auth');
 const Profile = require('../models/Profile');
+const User = require('../models/User');
+const Alert = require('../models/Alert');
+const sendEmail = require('../utils/sendEmail');
 const { v4: uuidv4 } = require('uuid');
 const crypto = require('crypto');
 const Filter = require('bad-words'); // Profanity filter
@@ -166,29 +169,71 @@ router.post('/public/:uniqueId/guestbook', async (req, res) => {
 // @route   POST api/profile/public/:uniqueId/alert
 // @desc    Send a private parking alert/notification (Public scanner -> Owner)
 router.post('/public/:uniqueId/alert', async (req, res) => {
-    const { message } = req.body;
-
-    if (!message) return res.status(400).json({ msg: 'Alert message is required' });
+    const { type, message } = req.body;
 
     try {
-        const newAlert = {
-            type: 'alert',
-            message,
-            date: Date.now(),
-            read: false
+        const profile = await Profile.findOne({ uniqueId: req.params.uniqueId }).populate('user', 'email name');
+        if (!profile) return res.status(404).json({ msg: 'Profile not found' });
+
+        const owner = profile.user;
+        if (!owner) return res.status(400).json({ msg: 'Owner not found for this profile' });
+
+        // Save to database
+        const alert = new Alert({
+            profile: profile._id,
+            owner: owner._id,
+            type: type || 'call_request',
+            message: message || `A scanner is requesting your attention for your ${profile.carName || 'vehicle'}.`,
+            senderIp: req.ip,
+            senderUserAgent: req.get('User-Agent')
+        });
+        await alert.save();
+
+        // Send Email Notification
+        const alertNames = {
+            emergency: '🚨 EMERGENCY ALERT',
+            parking: '🚦 PARKING ISSUE',
+            call_request: '📞 CALL REQUEST',
+            other: '💬 VEHICLE NOTIFICATION'
         };
 
-        const profile = await Profile.findOneAndUpdate(
-            { uniqueId: req.params.uniqueId },
-            { $push: { notifications: { $each: [newAlert], $position: 0 } } },
-            { returnDocument: 'after' }
-        );
+        await sendEmail({
+            to: owner.email,
+            subject: `ScanMyRide - ${alertNames[type] || 'Alert'} for ${profile.carName}`,
+            html: `
+                <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 2px solid #f4b00b; border-radius: 15px;">
+                    <div style="text-align: center; margin-bottom: 20px;">
+                        <h1 style="color: #f4b00b; margin: 0;">ScanMy<span style="color: #333;">Ride</span></h1>
+                        <p style="text-transform: uppercase; font-size: 10px; tracking: 2px; color: #999;">Privacy-First Alert System</p>
+                    </div>
+                    
+                    <div style="background: #fff8e6; padding: 20px; border-radius: 10px; border-left: 5px solid #f4b00b;">
+                        <h2 style="margin-top: 0; color: #856404;">${alertNames[type] || 'New Notification'}</h2>
+                        <p>Hello <strong>${owner.name}</strong>,</p>
+                        <p>Someone just scanned your QR code and triggered a priority alert for your <strong>${profile.carName || 'Vehicle'}</strong>.</p>
+                        
+                        <div style="background: white; padding: 15px; border-radius: 8px; border: 1px solid #ffeeba; margin: 15px 0;">
+                            <p style="margin: 0; font-style: italic; color: #555;">"${alert.message}"</p>
+                        </div>
+                        
+                        <p style="font-size: 12px; color: #856404;">Type: ${type.toUpperCase()}</p>
+                    </div>
+                    
+                    <p style="font-size: 13px; color: #666; margin-top: 20px;">
+                        This is an anonymous alert. Your phone number was <strong>not</strong> shown to the scanner. 
+                        Please attend to your vehicle if necessary.
+                    </p>
+                    
+                    <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+                    <p style="text-align: center; color: #999; font-size: 10px;">PROPRIETARY SCANNING LOGIC © SCANMYRIDE</p>
+                </div>
+            `
+        });
 
-        if (!profile) return res.status(404).json({ msg: 'Profile not found' });
-        res.json({ msg: 'Alert sent successfully' });
+        res.json({ msg: 'Owner has been notified successfully via priority alert.' });
     } catch (err) {
-        console.error(err.message);
-        res.status(500).send('Server Error');
+        console.error('Alert System Error:', err);
+        res.status(500).json({ msg: 'Alert system is currently offline. Please try again later.' });
     }
 });
 

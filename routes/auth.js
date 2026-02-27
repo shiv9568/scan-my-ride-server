@@ -2,17 +2,8 @@ const express = require('express');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
-const nodemailer = require('nodemailer');
 const User = require('../models/User');
-
-// Email Transporter Configuration
-const transporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
-    }
-});
+const sendEmail = require('../utils/sendEmail');
 
 // @route   POST api/auth/register
 // @desc    Register user
@@ -132,7 +123,23 @@ router.post('/forgot-password', async (req, res) => {
             `
         };
 
-        await transporter.sendMail(mailOptions);
+        await sendEmail({
+            to: email,
+            subject: 'ScanMyRide - Identity Restoration Code',
+            html: `
+                <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+                    <h2 style="color: #f4b00b; text-align: center;">Identity Restoration</h2>
+                    <p>Hello Commander,</p>
+                    <p>You requested an identity restoration code for your ScanMyRide account. Use the code below to reset your secret key:</p>
+                    <div style="background: #f9f9f9; padding: 20px; text-align: center; font-size: 32px; font-weight: bold; letter-spacing: 10px; color: #333; border-radius: 5px; margin: 20px 0;">
+                        ${code}
+                    </div>
+                    <p style="color: #666; font-size: 12px;">This code will expire in 10 minutes. If you did not request this, please ignore this email.</p>
+                    <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+                    <p style="text-align: center; color: #999; font-size: 10px; text-transform: uppercase; letter-spacing: 2px;">Proprietary Scanning Logic © ScanMyRide</p>
+                </div>
+            `
+        });
         console.log(`\n📧 EMAIL SENT TO ${email}: ${code} 📧\n`);
 
         res.json({ msg: 'Restoration code has been sent to your email.' });
