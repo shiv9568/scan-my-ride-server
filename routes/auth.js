@@ -95,12 +95,6 @@ const resetStore = new Map();
 router.post('/forgot-password', async (req, res) => {
     const { email } = req.body;
     try {
-        // Check if environment variables are set
-        if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-            console.error("CRITICAL ERROR: EMAIL_USER or EMAIL_PASS environment variables are not set.");
-            return res.status(500).json({ msg: 'Email service is not configured on the server. Please contact support.' });
-        }
-
         const user = await User.findOne({ email });
         if (!user) {
             // Security: Always return success message even if user not found to prevent user enumeration

@@ -1,25 +1,28 @@
 const nodemailer = require('nodemailer');
 
 const sendEmail = async ({ to, subject, html }) => {
-    // Check for missing credentials inside the function
-    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-        console.error("❌ MAIL CONFIG ERROR: EMAIL_USER or EMAIL_PASS environment variables are missing.");
-        throw new Error('Server email configuration missing (EMAIL_USER/EMAIL_PASS)');
-    }
+    // Credentials are hardcoded below for compatibility
 
     const transporter = nodemailer.createTransport({
-        service: 'gmail',
+        host: 'smtp.gmail.com',
+        port: 587,
+        family: 4,
+        secure: false,
         auth: {
-            user: process.env.EMAIL_USER,
-            pass: process.env.EMAIL_PASS
+            user: "shivanshbhatia9568@gmail.com",
+            pass: "fzofiafctfzutedu"
         },
-        connectionTimeout: 10000, // 10 seconds before timing out connection attempt
-        greetingTimeout: 10000,   // 10 seconds before timing out greeting
-        socketTimeout: 20000,     // 20 seconds for inactivity
+        tls: {
+            rejectUnauthorized: false
+        },
+        connectionTimeout: 30000, // 30 seconds
+        greetingTimeout: 30000,
+        socketTimeout: 60000,
+        dnsTimeout: 10000,
     });
 
     const mailOptions = {
-        from: `"ScanMyRide Security" <${process.env.EMAIL_USER}>`,
+        from: `"ScanMyRide Security" <shivanshbhatia9568@gmail.com>`,
         to,
         subject,
         html
