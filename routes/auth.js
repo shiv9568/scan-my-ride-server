@@ -91,61 +91,67 @@ router.put('/change-password', auth, async (req, res) => {
 const resetStore = new Map();
 
 // @route   POST api/auth/forgot-password
-// @desc    Request password reset (Mock)
+// @desc    Request password reset
 router.post('/forgot-password', async (req, res) => {
     const { email } = req.body;
     try {
+        // Check if environment variables are set
+        if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+            console.error("CRITICAL ERROR: EMAIL_USER or EMAIL_PASS environment variables are not set.");
+            return res.status(500).json({ msg: 'Email service is not configured on the server. Please contact support.' });
+        }
+
         const user = await User.findOne({ email });
         if (!user) {
-            return res.status(404).json({ msg: 'If this email is registered, a code has been sent.' });
+            // Security: Always return success message even if user not found to prevent user enumeration
+            return res.json({ msg: 'If this email is registered, a code has been sent.' });
         }
 
         const code = Math.floor(100000 + Math.random() * 900000).toString();
-        resetStore.set(email, { code, expires: Date.now() + 600000 }); // 10 mins
+        resetStore.set(email, { code, expires: Date.now() + 600_000 }); // 10 mins
 
-        // Send Real Email
-        const mailOptions = {
-            from: `"ScanMyRide Security" <${process.env.EMAIL_USER}>`,
-            to: email,
-            subject: 'ScanMyRide - Identity Restoration Code',
-            html: `
-                <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
-                    <h2 style="color: #f4b00b; text-align: center;">Identity Restoration</h2>
-                    <p>Hello Commander,</p>
-                    <p>You requested an identity restoration code for your ScanMyRide account. Use the code below to reset your secret key:</p>
-                    <div style="background: #f9f9f9; padding: 20px; text-align: center; font-size: 32px; font-weight: bold; letter-spacing: 10px; color: #333; border-radius: 5px; margin: 20px 0;">
-                        ${code}
-                    </div>
-                    <p style="color: #666; font-size: 12px;">This code will expire in 10 minutes. If you did not request this, please ignore this email.</p>
-                    <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
-                    <p style="text-align: center; color: #999; font-size: 10px; text-transform: uppercase; letter-spacing: 2px;">Proprietary Scanning Logic © ScanMyRide</p>
-                </div>
-            `
-        };
+        console.log(`\n--- PASSWORD RESET REQUEST ---`);
+        console.log(`User: ${email}`);
+        console.log(`Code: ${code}`);
+        console.log(`------------------------------\n`);
 
         await sendEmail({
             to: email,
             subject: 'ScanMyRide - Identity Restoration Code',
             html: `
-                <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
-                    <h2 style="color: #f4b00b; text-align: center;">Identity Restoration</h2>
-                    <p>Hello Commander,</p>
-                    <p>You requested an identity restoration code for your ScanMyRide account. Use the code below to reset your secret key:</p>
-                    <div style="background: #f9f9f9; padding: 20px; text-align: center; font-size: 32px; font-weight: bold; letter-spacing: 10px; color: #333; border-radius: 5px; margin: 20px 0;">
-                        ${code}
+                <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px; background-color: #0c0c0e; color: white;">
+                    <div style="text-align: center; margin-bottom: 20px;">
+                        <h1 style="color: #f4b00b; margin: 0; font-size: 24px; text-transform: uppercase; letter-spacing: 2px;">Identity Restoration</h1>
+                        <p style="color: #666; font-size: 10px; text-transform: uppercase;">ScanMyRide Security Hub</p>
                     </div>
-                    <p style="color: #666; font-size: 12px;">This code will expire in 10 minutes. If you did not request this, please ignore this email.</p>
-                    <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
-                    <p style="text-align: center; color: #999; font-size: 10px; text-transform: uppercase; letter-spacing: 2px;">Proprietary Scanning Logic © ScanMyRide</p>
+                    <div style="background: rgba(255,255,255,0.05); padding: 30px; border-radius: 15px; border: 1px solid rgba(255,255,255,0.1);">
+                        <p style="font-size: 14px; margin-top: 0;">Hello Commander,</p>
+                        <p style="font-size: 14px;">An identity restoration request was detected for your account. Use the authorization code below to establish a new secret key:</p>
+                        
+                        <div style="background: #f4b00b; padding: 20px; text-align: center; font-size: 32px; font-weight: 900; letter-spacing: 12px; color: black; border-radius: 12px; margin: 25px 0; font-family: monospace;">
+                            ${code}
+                        </div>
+                        
+                        <p style="color: #888; font-size: 12px; font-weight: bold; text-align: center;">This logic gate expires in 10 minutes.</p>
+                    </div>
+                    <p style="color: #444; font-size: 11px; margin-top: 25px; text-align: center;">
+                        If you did not initiate this sequence, please ignore this transmission. Your current secret key remains secure.
+                    </p>
+                    <div style="border-top: 1px solid #222; margin-top: 25px; padding-top: 20px; text-align: center;">
+                        <p style="color: #666; font-size: 9px; text-transform: uppercase; letter-spacing: 2px;">Proprietary Scanning Logic © ScanMyRide Ecosystem</p>
+                    </div>
                 </div>
             `
         });
-        console.log(`\n📧 EMAIL SENT TO ${email}: ${code} 📧\n`);
 
         res.json({ msg: 'Restoration code has been sent to your email.' });
     } catch (err) {
-        console.error("Email Error:", err);
-        res.status(500).json({ msg: 'Failed to send email. Ensure server credentials are correct.' });
+        console.error("CRITICAL AUTH ERROR (forgot-password):", err);
+        res.status(500).json({ 
+            msg: 'Failed to dispatch restoration sequence.', 
+            error: err.message, // Including error message to help the user identify missing env vars in production
+            hint: !process.env.EMAIL_USER ? 'Check if EMAIL_USER is set in Render dashboard.' : 'Check if EMAIL_PASS is a valid 16-digit App Password.'
+        });
     }
 });
 
