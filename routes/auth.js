@@ -92,14 +92,18 @@ const resetStore = new Map();
 
 // @route   POST api/auth/forgot-password
 // @desc    Request password reset
+// ⚡ Fire-and-forget pattern: respond immediately, send email in background
+//    This prevents Render cold-start + SMTP delay from causing a client timeout.
 router.post('/forgot-password', async (req, res) => {
     const { email } = req.body;
     try {
         const user = await User.findOne({ email });
-        if (!user) {
-            // Security: Always return success message even if user not found to prevent user enumeration
-            return res.json({ msg: 'If this email is registered, a code has been sent.' });
-        }
+
+        // Always respond immediately — don't wait for email to be sent.
+        // The code is stored first so it's ready even before the email arrives.
+        res.json({ msg: 'If this email is registered, a restoration code has been sent.' });
+
+        if (!user) return; // Security: don't reveal whether email exists
 
         const code = Math.floor(100000 + Math.random() * 900000).toString();
         resetStore.set(email, { code, expires: Date.now() + 600_000 }); // 10 mins
@@ -109,7 +113,8 @@ router.post('/forgot-password', async (req, res) => {
         console.log(`Code: ${code}`);
         console.log(`------------------------------\n`);
 
-        await sendEmail({
+        // Send email in the background — client already received 200 OK above
+        sendEmail({
             to: email,
             subject: 'ScanMyRide - Identity Restoration Code',
             html: `
@@ -136,15 +141,16 @@ router.post('/forgot-password', async (req, res) => {
                     </div>
                 </div>
             `
+        }).catch(err => {
+            // Log email failure silently — client already got 200, nothing we can do now
+            console.error(`❌ Background email failed for ${email}:`, err.message);
         });
 
-        res.json({ msg: 'Restoration code has been sent to your email.' });
     } catch (err) {
         console.error("CRITICAL AUTH ERROR (forgot-password):", err);
+        // Only reaches here if MongoDB findOne fails (email not sent yet)
         res.status(500).json({ 
-            msg: 'Failed to dispatch restoration sequence.', 
-            error: err.message, // Including error message to help the user identify missing env vars in production
-            hint: !process.env.EMAIL_USER ? 'Check if EMAIL_USER is set in Render dashboard.' : 'Check if EMAIL_PASS is a valid 16-digit App Password.'
+            msg: 'Failed to initiate restoration sequence. Please try again.',
         });
     }
 });

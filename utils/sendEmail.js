@@ -14,6 +14,8 @@ const sendEmail = async ({ to, subject, html }) => {
             user: process.env.EMAIL_USER,
             pass: process.env.EMAIL_PASS, // 16-char Google App Password
         },
+        connectionTimeout: 10000,  // 10s to establish SMTP connection
+        socketTimeout: 10000,      // 10s for SMTP socket inactivity
     });
 
     const mailOptions = {
